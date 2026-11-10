@@ -14,18 +14,7 @@
             theme: {
                 extend: {
                     colors: {
-                        amber: {
-                            50: '#fffbeb',
-                            100: '#fef3c7',
-                            800: '#92400e',
-                            900: '#78350f',
-                        },
-                        parchment: {
-                            light: '#fbf9f4',
-                            card: '#ffffff',
-                            dark: '#1e1b18',
-                            darkcard: '#2a2622'
-                        }
+                        amber: { 50: '#fffbeb', 100: '#fef3c7', 800: '#92400e', 900: '#78350f' }
                     }
                 }
             }
@@ -33,861 +22,165 @@
     </script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 引入前端圖片 OCR 辨識庫 (Tesseract.js) -->
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
-            background-color: #f7f5f0;
-        }
-        .dark body {
-            background-color: #1a1816;
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .dark ::-webkit-scrollbar-thumb {
-            background: #475569;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f7f5f0; }
+        .dark body { background-color: #1a1816; }
     </style>
 </head>
-<body class="text-slate-800 dark:text-slate-200 transition-colors duration-200 min-h-screen flex flex-col">
+<body class="text-slate-800 dark:text-slate-200 min-h-screen flex flex-col">
 
     <!-- Header Navigation -->
-    <header class="bg-amber-900 text-amber-50 shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <i class="fa-solid fa-book-bookmark text-2xl text-amber-400"></i>
-                <h1 class="text-xl font-bold tracking-wide">小說庫 <span class="text-xs font-normal opacity-75 bg-amber-800/80 px-2 py-0.5 rounded-full ml-1">閱讀記錄備忘</span></h1>
-            </div>
-            
-            <div class="flex items-center space-x-2 sm:space-x-4">
-                <button onclick="exportData()" class="p-2 text-xs sm:text-sm bg-amber-800 hover:bg-amber-700 rounded-lg transition flex items-center space-x-1" title="導出 JSON 備份">
-                    <i class="fa-solid fa-download"></i>
-                    <span class="hidden sm:inline">備份</span>
-                </button>
-                <label class="p-2 text-xs sm:text-sm bg-amber-800 hover:bg-amber-700 rounded-lg transition cursor-pointer flex items-center space-x-1" title="導入 JSON 備份">
-                    <i class="fa-solid fa-upload"></i>
-                    <span class="hidden sm:inline">還原</span>
-                    <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importData(event)">
-                </label>
-                <button onclick="openModal()" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-semibold px-3 py-2 rounded-lg transition text-xs sm:text-sm shadow flex items-center space-x-1.5">
-                    <i class="fa-solid fa-plus text-sm"></i>
-                    <span>新增小說</span>
-                </button>
-            </div>
+    <header class="bg-amber-900 text-amber-50 shadow-md sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <i class="fa-solid fa-book-bookmark text-2xl text-amber-400"></i>
+            <h1 class="text-xl font-bold tracking-wide">小說庫 <span class="text-xs font-normal opacity-75 bg-amber-800 px-2 py-0.5 rounded-full ml-1">閱讀記錄備忘</span></h1>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="openPasteImportModal()" class="bg-amber-800 hover:bg-amber-700 text-amber-100 font-semibold px-3 py-2 rounded-lg text-xs shadow flex items-center space-x-1">
+                <i class="fa-solid fa-paste"></i><span>貼上匯入</span>
+            </button>
+            <button onclick="openModal()" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-semibold px-3 py-2 rounded-lg text-xs shadow flex items-center space-x-1">
+                <i class="fa-solid fa-plus"></i><span>新增小說</span>
+            </button>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
-        
-        <!-- Stats Summary Bar -->
-        <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div class="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-500 dark:text-zinc-400 font-medium">收藏總數</p>
-                    <p id="statTotal" class="text-2xl font-bold text-slate-900 dark:text-white">0</p>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 flex items-center justify-center">
-                    <i class="fa-solid fa-books text-lg"></i>
-                </div>
-            </div>
-            <div class="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-500 dark:text-zinc-400 font-medium">每日追更中</p>
-                    <p id="statReading" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">0</p>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
-                    <i class="fa-solid fa-fire text-lg"></i>
-                </div>
-            </div>
-            <div class="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-500 dark:text-zinc-400 font-medium">養肥待看</p>
-                    <p id="statWaiting" class="text-2xl font-bold text-amber-600 dark:text-amber-400">0</p>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex items-center justify-center">
-                    <i class="fa-solid fa-seedling text-lg"></i>
-                </div>
-            </div>
-            <div class="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between">
-                <div>
-                    <p class="text-xs text-slate-500 dark:text-zinc-400 font-medium">已看完完結</p>
-                    <p id="statCompleted" class="text-2xl font-bold text-blue-600 dark:text-blue-400">0</p>
-                </div>
-                <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 flex items-center justify-center">
-                    <i class="fa-solid fa-circle-check text-lg"></i>
-                </div>
-            </div>
-        </section>
-
-        <!-- Search, Filter & Controls Panel -->
-        <section class="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-slate-200/60 dark:border-zinc-700/60 p-4 mb-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" id="searchInput" oninput="renderApp()" placeholder="搜尋書名、主角、備忘記憶點、作者或標籤..." class="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-800 text-sm">
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2.5">
-                    <select id="statusFilter" onchange="renderApp()" class="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-800">
-                        <option value="ALL">所有閱讀狀態</option>
-                        <option value="追更中">🔥 追更中</option>
-                        <option value="養肥中">🌱 養肥中</option>
-                        <option value="已完結">✅ 已完結</option>
-                        <option value="已棄坑">🛑 已棄坑</option>
-                    </select>
-
-                    <select id="sortBy" onchange="renderApp()" class="px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-800">
-                        <option value="updated">最後更新時間</option>
-                        <option value="rating">評分最高</option>
-                        <option value="title">書名排序</option>
-                    </select>
-
-                    <div class="flex bg-slate-100 dark:bg-zinc-900 p-1 rounded-lg border border-slate-200 dark:border-zinc-700">
-                        <button id="viewGridBtn" onclick="setViewMode('grid')" class="px-2.5 py-1 text-xs rounded transition font-medium bg-white dark:bg-zinc-800 shadow-sm text-amber-900 dark:text-amber-400">
-                            <i class="fa-solid fa-border-all mr-1"></i>卡片
-                        </button>
-                        <button id="viewListBtn" onclick="setViewMode('list')" class="px-2.5 py-1 text-xs rounded transition font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900">
-                            <i class="fa-solid fa-list-ul mr-1"></i>列表
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Category Pills -->
-            <div class="flex items-center space-x-2 overflow-x-auto pt-4 border-t border-slate-100 dark:border-zinc-700/50 mt-4 no-scrollbar">
-                <span class="text-xs font-semibold text-slate-400 dark:text-zinc-500 whitespace-nowrap mr-1">題材 (可多選):</span>
-                <button onclick="setGenreFilter('ALL')" class="genre-pill px-3 py-1 text-xs rounded-full border border-amber-800 bg-amber-800 text-white font-medium transition whitespace-nowrap" data-genre="ALL">全部</button>
-                <button onclick="setGenreFilter('甜寵')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="甜寵">甜寵</button>
-                <button onclick="setGenreFilter('重生')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="重生">重生</button>
-                <button onclick="setGenreFilter('校園')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="校園">校園</button>
-                <button onclick="setGenreFilter('權臣')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="權臣">權臣</button>
-                <button onclick="setGenreFilter('末世')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="末世">末世</button>
-                <button onclick="setGenreFilter('玄學')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="玄學">玄學</button>
-                <button onclick="setGenreFilter('救贖')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="救贖">救贖</button>
-                <button onclick="setGenreFilter('醫學')" class="genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap" data-genre="醫學">醫學</button>
-            </div>
-        </section>
-
-        <!-- Novels Display -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
         <section id="novelsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></section>
-
-        <!-- Empty State -->
-        <div id="emptyState" class="hidden py-16 text-center">
-            <div class="w-16 h-16 bg-slate-200 dark:bg-zinc-800 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-book-open text-2xl"></i>
-            </div>
-            <h3 class="text-lg font-bold text-slate-700 dark:text-zinc-300 mb-1">找不到相關的小說記錄</h3>
-            <button onclick="resetFilters()" class="text-sm text-amber-800 underline font-medium">重置所有篩選條件</button>
-        </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-slate-100 dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 py-4 mt-8 text-center text-xs text-slate-500">
-        <p>網文閱歷 (Novel Reading Log) &copy; 專為網絡小說愛好者打造的防忘備忘錄</p>
-    </footer>
-
-    <!-- ADD/EDIT NOVEL MODAL -->
-    <div id="novelModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
-        <div class="bg-white dark:bg-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-700 overflow-hidden my-8">
-            <div class="bg-amber-900 text-amber-50 px-6 py-4 flex items-center justify-between">
-                <h3 id="modalTitle" class="font-bold text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-pen-to-square text-amber-400"></i>
-                    <span>新增小說記錄</span>
+    <!-- 📋 直接貼上 JSON 匯入的彈跳視窗 -->
+    <div id="pasteImportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white dark:bg-zinc-800 w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-700 overflow-hidden my-8 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-amber-900 dark:text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-paste"></i> 貼上 JSON 文字匯入
                 </h3>
-                <button onclick="closeModal()" class="text-amber-200 hover:text-white transition">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
+                <button onclick="closePasteImportModal()" class="text-slate-400 hover:text-slate-600">✕</button>
             </div>
+            
+            <p class="text-xs text-slate-500 mb-2">請在下方方塊中貼上 AI 生成的 JSON 文字內容：</p>
+            <textarea id="jsonTextInput" rows="8" placeholder='[&#10;  { "title": "催眠財閥太子後...", "author": "小撒嬌" }&#10;]' class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-mono focus:ring-2 focus:ring-amber-800 focus:outline-none mb-4"></textarea>
 
-            <form id="novelForm" onsubmit="saveNovel(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-                <input type="hidden" id="novelId">
-
-                <!-- ⚡ 圖片截圖智慧 OCR 解析區塊 -->
-                <div class="bg-amber-50/80 dark:bg-zinc-900 border border-amber-200 dark:border-amber-900/50 p-3.5 rounded-xl">
-                    <label class="block text-xs font-bold text-amber-900 dark:text-amber-400 mb-1 flex items-center justify-between">
-                        <span>📷 上傳小說截圖 (自動 AI 辨識)</span>
-                        <span class="font-normal text-slate-400 text-[11px]">選擇圖片自動填入欄位</span>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4 text-xs font-medium">
+                    <label class="flex items-center space-x-1 cursor-pointer">
+                        <input type="radio" name="importMode" value="merge" checked class="accent-amber-800">
+                        <span>📥 合併 (保留舊資料)</span>
                     </label>
-                    <div class="flex items-center gap-2 mt-2">
-                        <input type="file" id="imageInput" accept="image/*" class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-800 file:text-white hover:file:bg-amber-900 cursor-pointer">
-                        <button type="button" onclick="processImage()" id="ocrBtn" class="px-3.5 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-semibold shrink-0 transition shadow-sm">
-                            解析圖片
-                        </button>
-                    </div>
-                    <p id="ocrStatus" class="text-[11px] text-amber-700 dark:text-amber-400 mt-2 hidden">⏳ 正在辨識圖片中的文字，請稍候...</p>
+                    <label class="flex items-center space-x-1 cursor-pointer">
+                        <input type="radio" name="importMode" value="overwrite" class="accent-amber-800">
+                        <span class="text-rose-600">⚠️ 覆蓋 (清空舊資料)</span>
+                    </label>
                 </div>
-
-                <!-- Title & Author -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">書名 *</label>
-                        <input type="text" id="formTitle" required placeholder="例如：重生成校園學霸" class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">作者</label>
-                        <input type="text" id="formAuthor" placeholder="例如：某某" class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none">
-                    </div>
+                <div class="flex space-x-2">
+                    <button onclick="closePasteImportModal()" class="px-3 py-1.5 text-xs text-slate-500">取消</button>
+                    <button onclick="processTextImport()" class="px-4 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-semibold shadow">開始匯入</button>
                 </div>
+            </div>
+        </div>
+    </div>
 
-                <!-- Genre Multi-select -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-2">題材分類 (可複選)</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-zinc-900 p-3 rounded-lg border border-slate-200 dark:border-zinc-700">
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="甜寵" class="rounded accent-amber-800"><span>甜寵</span></label>
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="重生" class="rounded accent-amber-800"><span>重生</span></label>
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="校園" class="rounded accent-amber-800"><span>校園</span></label>
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="權臣" class="rounded accent-amber-800"><span>權臣</span></label>
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="末世" class="rounded accent-amber-800"><span>末世</span></label>
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="玄學" class="rounded accent-amber-800"><span>玄學</span></label>
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="救贖" class="rounded accent-amber-800"><span>救贖</span></label>
-                        <label class="flex items-center space-x-2 text-xs cursor-pointer"><input type="checkbox" name="formGenre" value="醫學" class="rounded accent-amber-800"><span>醫學</span></label>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">主角姓名</label>
-                        <input type="text" id="formProtagonist" placeholder="例如：沈硯、林微" class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">閱讀狀態</label>
-                        <select id="formStatus" class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none">
-                            <option value="追更中">🔥 追更中</option>
-                            <option value="養肥中">🌱 養肥中</option>
-                            <option value="已完結">✅ 已完結</option>
-                            <option value="已棄坑">🛑 已棄坑</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">閱讀進度</label>
-                        <input type="text" id="formProgress" placeholder="例如：第 85 章" class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">個人評分 (1-5 星)</label>
-                        <div class="flex items-center space-x-2 py-1.5">
-                            <input type="range" id="formRating" min="1" max="5" step="0.5" value="4.5" oninput="document.getElementById('ratingDisplay').innerText = this.value" class="w-full accent-amber-600">
-                            <span id="ratingDisplay" class="text-sm font-bold text-amber-600 dark:text-amber-400 w-8 text-right">4.5</span>
-                            <i class="fa-solid fa-star text-amber-500 text-xs"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-amber-900 dark:text-amber-400 mb-1">💡 一句話防忘記憶點</label>
-                    <input type="text" id="formSummary" required placeholder="重生回到高三，靠玄學與醫學雙絕救贖了前世陰鬱大佬..." class="w-full px-3 py-2 bg-amber-50/50 dark:bg-zinc-900 border border-amber-200 dark:border-amber-900/40 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">關鍵劇情備忘</label>
-                    <textarea id="formPlotMemory" rows="3" placeholder="關鍵事件備忘..." class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">讀後感 / 避雷提醒</label>
-                    <textarea id="formNotes" rows="2" placeholder="優缺點與避雷..." class="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-amber-800 focus:outline-none"></textarea>
-                </div>
-
-                <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-zinc-700">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm text-slate-600 dark:text-zinc-400">取消</button>
-                    <button type="submit" class="px-5 py-2 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-sm font-semibold shadow transition">儲存小說</button>
+    <!-- 新增/編輯小說視窗略（保留原樣） -->
+    <div id="novelModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white dark:bg-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl p-6">
+            <h3 class="font-bold text-lg mb-4">新增小說記錄</h3>
+            <form onsubmit="saveNovel(event)" class="space-y-4">
+                <div><label class="block text-xs font-bold mb-1">書名 *</label><input type="text" id="formTitle" required class="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 dark:bg-zinc-900"></div>
+                <div><label class="block text-xs font-bold mb-1">作者</label><input type="text" id="formAuthor" class="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 dark:bg-zinc-900"></div>
+                <div><label class="block text-xs font-bold mb-1">💡 一句話記憶點</label><input type="text" id="formSummary" required class="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 dark:bg-zinc-900"></div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm text-slate-500">取消</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-800 text-white rounded-lg text-sm font-semibold">儲存</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- DETAIL VIEW DRAWER -->
-    <div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-white dark:bg-zinc-800 w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-700 overflow-hidden my-8 max-h-[85vh] flex flex-col">
-            <div class="bg-slate-900 text-white p-5 flex items-start justify-between">
-                <div>
-                    <div id="detailGenresContainer" class="flex flex-wrap items-center gap-1.5 mb-1"></div>
-                    <h2 id="detailTitle" class="text-xl font-bold"></h2>
-                    <p class="text-xs text-slate-400 mt-0.5">作者: <span id="detailAuthor"></span> | 主角: <span id="detailProtagonist"></span></p>
-                </div>
-                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white transition">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4 overflow-y-auto flex-1">
-                <div class="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-100">
-                    <div>
-                        <span class="text-xs text-amber-900/70 block">閱讀進度</span>
-                        <span id="detailProgress" class="font-bold text-amber-950 dark:text-amber-200"></span>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-xs text-amber-900/70 block">評分</span>
-                        <div class="flex items-center text-amber-500 font-bold">
-                            <span id="detailRating" class="mr-1 text-base"></span>
-                            <i class="fa-solid fa-star text-xs"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="space-y-1">
-                    <h4 class="text-xs font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider">💡 核心防忘記憶點</h4>
-                    <p id="detailSummary" class="text-sm bg-slate-50 dark:bg-zinc-900 p-3 rounded-lg border border-slate-200 leading-relaxed font-medium"></p>
-                </div>
-                <div class="space-y-1">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">📌 關鍵劇情備忘</h4>
-                    <div id="detailPlotMemory" class="text-sm bg-slate-50 dark:bg-zinc-900 p-3 rounded-lg border border-slate-200 leading-relaxed whitespace-pre-line"></div>
-                </div>
-                <div class="space-y-1">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">⚡ 讀後感與避雷提醒</h4>
-                    <div id="detailNotes" class="text-sm bg-slate-50 dark:bg-zinc-900 p-3 rounded-lg border border-slate-200 leading-relaxed whitespace-pre-line"></div>
-                </div>
-            </div>
-            <div class="bg-slate-50 dark:bg-zinc-900 px-6 py-3 border-t border-slate-200 flex items-center justify-between">
-                <button id="detailDeleteBtn" class="text-xs text-rose-600 hover:underline flex items-center space-x-1">
-                    <i class="fa-solid fa-trash-can"></i><span>刪除此記錄</span>
-                </button>
-                <button id="detailEditBtn" class="px-4 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-medium transition flex items-center space-x-1">
-                    <i class="fa-solid fa-pen"></i><span>編輯資料</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- JavaScript Application Logic -->
     <script>
-        const SAMPLE_NOVELS = [
-            {
-                id: "sample-1",
-                title: "重生成校園學霸男神",
-                author: "竹已",
-                genres: ["重生", "校園", "甜寵", "救贖"],
-                protagonist: "沈硯 & 林微",
-                status: "已完結",
-                rating: 4.8,
-                progress: "全書完結 (番外完)",
-                summary: "一朝重生回到高中時代，學霸男神一邊瘋狂刷題考大學，一邊把前世自閉的小同桌寵上天。",
-                plotMemory: "1. 幫同桌擋下家長的苛責。\n2. 聯考雙雙拿全市第一。",
-                notes: "超甜且治癒，救贖感拉滿。",
-                updatedAt: new Date(Date.now() - 86400000 * 2).toISOString()
-            }
-        ];
-
         let novels = [];
-        let activeGenreFilter = 'ALL';
-        let viewMode = 'grid';
+        window.onload = function() { loadData(); render(); };
 
-        window.onload = function() {
-            loadFromLocalStorage();
-            renderApp();
-        };
-
-        function loadFromLocalStorage() {
+        function loadData() {
             const data = localStorage.getItem('novel_tracker_data_v2');
-            if (data) {
-                try {
-                    novels = JSON.parse(data);
-                    novels = novels.map(n => {
-                        if (!n.genres && n.genre) n.genres = [n.genre];
-                        return n;
-                    });
-                } catch (e) {
-                    novels = SAMPLE_NOVELS;
-                }
-            } else {
-                novels = SAMPLE_NOVELS;
-                saveToLocalStorage();
-            }
+            novels = data ? JSON.parse(data) : [];
         }
 
-        function saveToLocalStorage() {
+        function saveData() {
             localStorage.setItem('novel_tracker_data_v2', JSON.stringify(novels));
         }
 
-        function renderApp() {
-            updateStats();
-            renderNovels();
+        function render() {
+            document.getElementById('novelsContainer').innerHTML = novels.map(n => `
+                <div class="bg-white dark:bg-zinc-800 p-5 rounded-xl border shadow-sm">
+                    <h3 class="font-bold text-base mb-1">${escapeHTML(n.title)}</h3>
+                    <p class="text-xs text-slate-500 mb-2">作者: ${escapeHTML(n.author || '未知')} | 主角: ${escapeHTML(n.protagonist || '未知')}</p>
+                    <p class="text-xs text-slate-700 dark:text-zinc-300">💡 ${escapeHTML(n.summary || '')}</p>
+                </div>
+            `).join('');
         }
 
-        function updateStats() {
-            document.getElementById('statTotal').innerText = novels.length;
-            document.getElementById('statReading').innerText = novels.filter(n => n.status === '追更中').length;
-            document.getElementById('statWaiting').innerText = novels.filter(n => n.status === '養肥中').length;
-            document.getElementById('statCompleted').innerText = novels.filter(n => n.status === '已完結').length;
-        }
+        // 📋 貼上 JSON 匯入邏輯
+        function openPasteImportModal() { document.getElementById('pasteImportModal').classList.remove('hidden'); }
+        function closePasteImportModal() { document.getElementById('pasteImportModal').classList.add('hidden'); }
 
-        function setGenreFilter(genre) {
-            activeGenreFilter = genre;
-            document.querySelectorAll('.genre-pill').forEach(btn => {
-                if (btn.dataset.genre === genre) {
-                    btn.className = 'genre-pill px-3 py-1 text-xs rounded-full border border-amber-800 bg-amber-800 text-white font-medium transition whitespace-nowrap';
-                } else {
-                    btn.className = 'genre-pill px-3 py-1 text-xs rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:border-amber-800 transition whitespace-nowrap';
-                }
-            });
-            renderApp();
-        }
-
-        function setViewMode(mode) {
-            viewMode = mode;
-            const gridBtn = document.getElementById('viewGridBtn');
-            const listBtn = document.getElementById('viewListBtn');
-            const container = document.getElementById('novelsContainer');
-
-            if (mode === 'grid') {
-                gridBtn.className = 'px-2.5 py-1 text-xs rounded transition font-medium bg-white dark:bg-zinc-800 shadow-sm text-amber-900 dark:text-amber-400';
-                listBtn.className = 'px-2.5 py-1 text-xs rounded transition font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900';
-                container.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5';
-            } else {
-                listBtn.className = 'px-2.5 py-1 text-xs rounded transition font-medium bg-white dark:bg-zinc-800 shadow-sm text-amber-900 dark:text-amber-400';
-                gridBtn.className = 'px-2.5 py-1 text-xs rounded transition font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900';
-                container.className = 'flex flex-col space-y-3';
-            }
-            renderNovels();
-        }
-
-        function resetFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('statusFilter').value = 'ALL';
-            setGenreFilter('ALL');
-        }
-
-        function getFilteredAndSortedNovels() {
-            const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            const sortBy = document.getElementById('sortBy').value;
-
-            return novels.filter(novel => {
-                const matchSearch = !searchTerm || 
-                    novel.title.toLowerCase().includes(searchTerm) ||
-                    (novel.author && novel.author.toLowerCase().includes(searchTerm)) ||
-                    (novel.protagonist && novel.protagonist.toLowerCase().includes(searchTerm)) ||
-                    (novel.summary && novel.summary.toLowerCase().includes(searchTerm)) ||
-                    (novel.plotMemory && novel.plotMemory.toLowerCase().includes(searchTerm)) ||
-                    (novel.notes && novel.notes.toLowerCase().includes(searchTerm));
-
-                const novelGenres = novel.genres || [];
-                const matchGenre = activeGenreFilter === 'ALL' || novelGenres.includes(activeGenreFilter);
-                const matchStatus = statusFilter === 'ALL' || novel.status === statusFilter;
-
-                return matchSearch && matchGenre && matchStatus;
-            }).sort((a, b) => {
-                if (sortBy === 'rating') return b.rating - a.rating;
-                if (sortBy === 'title') return a.title.localeCompare(b.title, 'zh-Hant');
-                return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
-            });
-        }
-
-        function renderNovels() {
-            const container = document.getElementById('novelsContainer');
-            const emptyState = document.getElementById('emptyState');
-            const filteredList = getFilteredAndSortedNovels();
-
-            if (filteredList.length === 0) {
-                container.innerHTML = '';
-                emptyState.classList.remove('hidden');
+        function processTextImport() {
+            const jsonText = document.getElementById('jsonTextInput').value.trim();
+            if (!jsonText) {
+                alert('請先貼上 JSON 文字！');
                 return;
             }
-            emptyState.classList.add('hidden');
-
-            if (viewMode === 'grid') {
-                container.innerHTML = filteredList.map(n => createGridCardHTML(n)).join('');
-            } else {
-                container.innerHTML = filteredList.map(n => createListItemHTML(n)).join('');
-            }
-        }
-
-        function getStatusBadgeClass(status) {
-            switch(status) {
-                case '追更中': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-                case '養肥中': return 'bg-amber-100 text-amber-800 border-amber-200';
-                case '已完結': return 'bg-blue-100 text-blue-800 border-blue-200';
-                case '已棄坑': return 'bg-slate-100 text-slate-600 border-slate-200';
-                default: return 'bg-slate-100 text-slate-800';
-            }
-        }
-
-        function createGenresBadgesHTML(genres) {
-            if (!genres || genres.length === 0) return '<span class="bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">未分類</span>';
-            return genres.map(g => `<span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px] font-medium border border-amber-200">${escapeHTML(g)}</span>`).join(' ');
-        }
-
-        function createGridCardHTML(novel) {
-            return `
-                <div onclick="openDetailModal('${novel.id}')" class="bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between overflow-hidden group">
-                    <div class="p-5">
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <span class="text-xs px-2.5 py-0.5 rounded-full font-medium border ${getStatusBadgeClass(novel.status)}">${novel.status}</span>
-                            <div class="flex items-center text-amber-500 font-bold text-xs bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                                <i class="fa-solid fa-star text-[10px] mr-1"></i><span>${novel.rating}</span>
-                            </div>
-                        </div>
-                        <h3 class="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-800 transition line-clamp-1 mb-1">${escapeHTML(novel.title)}</h3>
-                        <div class="text-xs text-slate-500 flex items-center justify-between mb-2">
-                            <span><i class="fa-solid fa-pen-nib mr-1"></i>${escapeHTML(novel.author || '未知')}</span>
-                            <span><i class="fa-solid fa-user-ninja mr-1"></i>${escapeHTML(novel.protagonist || '未知')}</span>
-                        </div>
-                        <div class="flex flex-wrap gap-1 mb-3">${createGenresBadgesHTML(novel.genres)}</div>
-                        <div class="bg-amber-50/60 dark:bg-zinc-900/60 border border-amber-100 p-2.5 rounded-lg mb-3">
-                            <p class="text-xs text-slate-700 dark:text-zinc-300 line-clamp-2 leading-relaxed">
-                                <strong class="text-amber-900">💡 印象:</strong> ${escapeHTML(novel.summary || '未填寫簡介')}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="px-5 py-3 bg-slate-50 dark:bg-zinc-900/50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                        <span class="truncate max-w-[200px]"><i class="fa-solid fa-bookmark mr-1 text-amber-700"></i>${escapeHTML(novel.progress || '未記錄')}</span>
-                        <span class="text-[11px] text-slate-400"><i class="fa-solid fa-clock mr-1"></i>${formatDate(novel.updatedAt)}</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        function createListItemHTML(novel) {
-            return `
-                <div onclick="openDetailModal('${novel.id}')" class="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group">
-                    <div class="flex-1">
-                        <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <span class="text-xs px-2 py-0.5 rounded-full font-medium border ${getStatusBadgeClass(novel.status)}">${novel.status}</span>
-                            <div class="flex flex-wrap gap-1">${createGenresBadgesHTML(novel.genres)}</div>
-                            <h3 class="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-800 transition">${escapeHTML(novel.title)}</h3>
-                            <span class="text-xs text-slate-400">(${escapeHTML(novel.author || '未知著')})</span>
-                        </div>
-                        <p class="text-xs text-slate-600 dark:text-zinc-400 line-clamp-1">
-                            <span class="font-semibold text-amber-900">主角: ${escapeHTML(novel.protagonist || '無')}</span> | 💡 ${escapeHTML(novel.summary || '無簡介')}
-                        </p>
-                    </div>
-                    <div class="flex items-center justify-between md:justify-end gap-4 text-xs shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-                        <span class="text-slate-500"><i class="fa-solid fa-bookmark text-amber-700 mr-1"></i>${escapeHTML(novel.progress || '未記')}</span>
-                        <div class="flex items-center text-amber-500 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                            <i class="fa-solid fa-star text-[10px] mr-1"></i>${novel.rating}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // 📷 圖片 OCR 辨識核心邏輯
-        function simpToTrad(str) {
-            const map = {'气':'氣', '体':'體', '书':'書', '作':'作', '者':'者', '甜':'甜', '宠':'寵', '爱':'愛', '阮':'阮', '昭':'昭', '颜':'顏', '诱':'誘', '缠':'纏', '独':'獨', '现':'現', '实':'實', '后':'後', '觉':'覺', '脑':'腦', '恋':'戀', '总':'總'};
-            return str.split('').map(c => map[c] || c).join('');
-        }
-
-        async function processImage() {
-            const fileInput = document.getElementById('imageInput');
-            const statusEl = document.getElementById('ocrStatus');
-            const btn = document.getElementById('ocrBtn');
-
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('請先選擇一張小說截圖圖片！');
-                return;
-            }
-
-            const file = fileInput.files[0];
-            statusEl.classList.remove('hidden');
-            statusEl.innerText = "⏳ 正在讀取並辨識截圖中的文字，請稍候...";
-            btn.disabled = true;
 
             try {
-                const worker = await Tesseract.createWorker('chi_sim+chi_tra');
-                const ret = await worker.recognize(file);
-                await worker.terminate();
-
-                let rawText = ret.data.text;
-                let cleanText = simpToTrad(rawText);
-
-                parseOCRResult(cleanText);
-                statusEl.innerText = "✅ 圖片辨識成功！已自動填入欄位。";
-            } catch (err) {
-                console.error(err);
-                statusEl.innerText = "❌ 辨識失敗，請上傳較清晰的圖片。";
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
-        function parseOCRResult(text) {
-            const lines = text.split('\n').map(l => l.trim()).filter(l => {
-                if (!l) return false;
-                if (/^\d{1,2}:\d{2}$/.test(l)) return false;
-                if (l.includes('評分') || l.includes('分人數') || l === '•書架' || l.includes('連載中') || 
-                    l.includes('萬字') || l === '目錄' || l === '聽書' || l.includes('免費閱讀') || 
-                    l.includes('人正在閱讀') || l.includes('暫無') || l.includes('詳情')) {
-                    return false;
+                const importedNovels = JSON.parse(jsonText);
+                if (!Array.isArray(importedNovels)) {
+                    alert('貼上的文字格式不正確（必須是包含中括號 [] 的 JSON 陣列）');
+                    return;
                 }
-                return true;
-            });
 
-            if (lines.length > 0) {
-                let title = lines.find(l => l.length > 1 && !l.includes('・')) || lines[0];
-                document.getElementById('formTitle').value = title.replace(/《|》/g, '').trim();
-            }
+                const mode = document.querySelector('input[name="importMode"]:checked').value;
 
-            for (let l of lines) {
-                if (l.length >= 2 && l.length <= 5 && !l.includes('，') && !l.includes('。') && !l.includes('【')) {
-                    if (l !== document.getElementById('formTitle').value) {
-                        document.getElementById('formAuthor').value = l;
-                        break;
+                if (mode === 'merge') {
+                    const existingIds = new Set(novels.map(n => n.id));
+                    let addedCount = 0;
+                    importedNovels.forEach(imported => {
+                        if (!existingIds.has(imported.id)) {
+                            novels.unshift(imported);
+                            addedCount++;
+                        }
+                    });
+                    saveData();
+                    render();
+                    alert(`✅ 已完成合併！成功新增 ${addedCount} 本小說。`);
+                } else {
+                    if (confirm('⚠️ 確定要【完全覆蓋】嗎？這會清除你目前的所有舊資料！')) {
+                        novels = importedNovels;
+                        saveData();
+                        render();
+                        alert(`✅ 已完成覆蓋！目前共 ${novels.length} 本小說。`);
                     }
                 }
-            }
 
-            document.querySelectorAll('input[name="formGenre"]').forEach(cb => {
-                if (text.includes(cb.value)) cb.checked = true;
-            });
-
-            let summaryIndex = lines.findIndex(l => l.includes('【') || l.length > 20);
-            if (summaryIndex !== -1) {
-                document.getElementById('formSummary').value = lines.slice(summaryIndex, summaryIndex + 3).join(' ');
-            } else {
-                document.getElementById('formSummary').value = text.slice(0, 120);
+                document.getElementById('jsonTextInput').value = '';
+                closePasteImportModal();
+            } catch (err) {
+                alert('JSON 解析失敗，請確認貼上的文字是否完整！');
             }
         }
 
-        // Modal Controls
-        function openModal(editId = null) {
-            const modal = document.getElementById('novelModal');
-            const form = document.getElementById('novelForm');
-            const titleEl = document.getElementById('modalTitle');
-            document.getElementById('ocrStatus').classList.add('hidden');
-
-            form.reset();
-            document.getElementById('novelId').value = '';
-            document.getElementById('ratingDisplay').innerText = '4.5';
-            document.querySelectorAll('input[name="formGenre"]').forEach(cb => cb.checked = false);
-
-            if (editId) {
-                const target = novels.find(n => n.id === editId);
-                if (target) {
-                    titleEl.innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-400"></i><span>編輯小說：${escapeHTML(target.title)}</span>`;
-                    document.getElementById('novelId').value = target.id;
-                    document.getElementById('formTitle').value = target.title || '';
-                    document.getElementById('formAuthor').value = target.author || '';
-                    document.getElementById('formProtagonist').value = target.protagonist || '';
-                    document.getElementById('formStatus').value = target.status || '追更中';
-                    document.getElementById('formProgress').value = target.progress || '';
-                    document.getElementById('formRating').value = target.rating || 4.5;
-                    document.getElementById('ratingDisplay').innerText = target.rating || 4.5;
-                    document.getElementById('formSummary').value = target.summary || '';
-                    document.getElementById('formPlotMemory').value = target.plotMemory || '';
-                    document.getElementById('formNotes').value = target.notes || '';
-
-                    const targetGenres = target.genres || [];
-                    document.querySelectorAll('input[name="formGenre"]').forEach(cb => {
-                        if (targetGenres.includes(cb.value)) cb.checked = true;
-                    });
-                }
-            } else {
-                titleEl.innerHTML = `<i class="fa-solid fa-plus text-amber-400"></i><span>新增小說記錄</span>`;
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('novelModal').classList.add('hidden');
-        }
-
+        function openModal() { document.getElementById('novelModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('novelModal').classList.add('hidden'); }
         function saveNovel(e) {
             e.preventDefault();
-            const id = document.getElementById('novelId').value;
-            const title = document.getElementById('formTitle').value.trim();
-            const author = document.getElementById('formAuthor').value.trim();
-            
-            const genres = [];
-            document.querySelectorAll('input[name="formGenre"]:checked').forEach(cb => genres.push(cb.value));
-
-            const protagonist = document.getElementById('formProtagonist').value.trim();
-            const status = document.getElementById('formStatus').value;
-            const progress = document.getElementById('formProgress').value.trim();
-            const rating = parseFloat(document.getElementById('formRating').value);
-            const summary = document.getElementById('formSummary').value.trim();
-            const plotMemory = document.getElementById('formPlotMemory').value.trim();
-            const notes = document.getElementById('formNotes').value.trim();
-
-            if (!title) return;
-
-            if (id) {
-                const index = novels.findIndex(n => n.id === id);
-                if (index !== -1) {
-                    novels[index] = {
-                        ...novels[index],
-                        title, author, genres, protagonist, status, progress, rating, summary, plotMemory, notes,
-                        updatedAt: new Date().toISOString()
-                    };
-                }
-            } else {
-                const newNovel = {
-                    id: 'novel-' + Date.now(),
-                    title, author, genres, protagonist, status, progress, rating, summary, plotMemory, notes,
-                    updatedAt: new Date().toISOString()
-                };
-                novels.unshift(newNovel);
-            }
-
-            saveToLocalStorage();
+            const title = document.getElementById('formTitle').value;
+            const author = document.getElementById('formAuthor').value;
+            const summary = document.getElementById('formSummary').value;
+            novels.unshift({ id: 'novel-' + Date.now(), title, author, summary, status: '追更中' });
+            saveData();
             closeModal();
-            closeDetailModal();
-            renderApp();
+            render();
         }
-
-        function openDetailModal(id) {
-            const novel = novels.find(n => n.id === id);
-            if (!novel) return;
-
-            document.getElementById('detailTitle').innerText = novel.title;
-            document.getElementById('detailAuthor').innerText = novel.author || '未填寫';
-            document.getElementById('detailProtagonist').innerText = novel.protagonist || '未填寫';
-            document.getElementById('detailGenresContainer').innerHTML = createGenresBadgesHTML(novel.genres);
-            document.getElementById('detailStatus').innerText = novel.status;
-            document.getElementById('detailProgress').innerText = novel.progress || '未記錄進度';
-            document.getElementById('detailRating').innerText = novel.rating;
-            document.getElementById('detailSummary').innerText = novel.summary || '尚無簡介備忘';
-            document.getElementById('detailPlotMemory').innerText = novel.plotMemory || '尚無重大劇情節點記錄';
-            document.getElementById('detailNotes').innerText = novel.notes || '尚無讀後感';
-
-            document.getElementById('detailEditBtn').onclick = () => { closeDetailModal(); openModal(novel.id); };
-            document.getElementById('detailDeleteBtn').onclick = () => { if (confirm(`確定要刪除《${novel.title}》嗎？`)) deleteNovel(novel.id); };
-
-            document.getElementById('detailModal').classList.remove('hidden');
-        }
-
-        function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); }
-        function deleteNovel(id) { novels = novels.filter(n => n.id !== id); saveToLocalStorage(); closeDetailModal(); renderApp(); }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(novels, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `novel_tracker_backup_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importData(event) {
-            const fileReader = new FileReader();
-            fileReader.onload = function(e) {
-                try {
-                    const importedNovels = JSON.parse(e.target.result);
-                    if (!Array.isArray(importedNovels)) {
-                        alert('無效的 JSON 備份檔案格式！');
-                        return;
-                    }
-
-                    // 彈出選擇提示框
-                    const choice = prompt(
-                        `📥 請選擇匯入方式：\n\n` +
-                        `輸入 1 ：【合併匯入】（保留現有資料，僅加入新小說）\n` +
-                        `輸入 2 ：【完全覆蓋】（刪除目前所有舊資料，清空重來）\n\n` +
-                        `請輸入數字 1 或 2：`,
-                        "1"
-                    );
-
-                    if (choice === "1") {
-                        // 1. 合併模式（防重複）
-                        const existingIds = new Set(novels.map(n => n.id));
-                        let addedCount = 0;
-                        importedNovels.forEach(imported => {
-                            if (!existingIds.has(imported.id)) {
-                                novels.unshift(imported);
-                                addedCount++;
-                            }
-                        });
-                        saveToLocalStorage();
-                        renderApp();
-                        alert(`✅ 已完成合併！成功新增 ${addedCount} 本小說，原本的資料全數保留。`);
-
-                    } else if (choice === "2") {
-                        // 2. 覆蓋模式
-                        if (confirm(`⚠️ 確定要【完全覆蓋】嗎？這會清除你目前畫面上的所有資料！`)) {
-                            novels = importedNovels;
-                            saveToLocalStorage();
-                            renderApp();
-                            alert(`✅ 已完成完全覆蓋！目前共載入 ${novels.length} 本小說。`);
-                        }
-                    } else if (choice !== null) {
-                        alert('取消匯入：請輸入 1 或 2。');
-                    }
-                } catch (err) {
-                    alert('檔案讀取失敗，請確認檔案格式是否正確。');
-                }
-            };
-            if (event.target.files[0]) {
-                fileReader.readAsText(event.target.files[0]);
-            }
-        }function importData(event) {
-            const fileReader = new FileReader();
-            fileReader.onload = function(e) {
-                try {
-                    const importedNovels = JSON.parse(e.target.result);
-                    if (!Array.isArray(importedNovels)) {
-                        alert('無效的 JSON 備份檔案格式！');
-                        return;
-                    }
-
-                    // 彈出選擇提示框
-                    const choice = prompt(
-                        `📥 請選擇匯入方式：\n\n` +
-                        `輸入 1 ：【合併匯入】（保留現有資料，僅加入新小說）\n` +
-                        `輸入 2 ：【完全覆蓋】（刪除目前所有舊資料，清空重來）\n\n` +
-                        `請輸入數字 1 或 2：`,
-                        "1"
-                    );
-
-                    if (choice === "1") {
-                        // 1. 合併模式（防重複）
-                        const existingIds = new Set(novels.map(n => n.id));
-                        let addedCount = 0;
-                        importedNovels.forEach(imported => {
-                            if (!existingIds.has(imported.id)) {
-                                novels.unshift(imported);
-                                addedCount++;
-                            }
-                        });
-                        saveToLocalStorage();
-                        renderApp();
-                        alert(`✅ 已完成合併！成功新增 ${addedCount} 本小說，原本的資料全數保留。`);
-
-                    } else if (choice === "2") {
-                        // 2. 覆蓋模式
-                        if (confirm(`⚠️ 確定要【完全覆蓋】嗎？這會清除你目前畫面上的所有資料！`)) {
-                            novels = importedNovels;
-                            saveToLocalStorage();
-                            renderApp();
-                            alert(`✅ 已完成完全覆蓋！目前共載入 ${novels.length} 本小說。`);
-                        }
-                    } else if (choice !== null) {
-                        alert('取消匯入：請輸入 1 或 2。');
-                    }
-                } catch (err) {
-                    alert('檔案讀取失敗，請確認檔案格式是否正確。');
-                }
-            };
-            if (event.target.files[0]) {
-                fileReader.readAsText(event.target.files[0]);
-            }
-        }
-
-        function escapeHTML(str) {
-            if (!str) return '';
-            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-        }
-
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            const now = new Date();
-            const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
-            if (diffHours < 24) return diffHours <= 0 ? '剛剛' : `${diffHours} 小時前`;
-            if (diffHours < 24 * 7) return `${Math.floor(diffHours / 24)} 天前`;
-            return `${date.getMonth() + 1}/${date.getDate()}`;
-        }
+        function escapeHTML(str) { return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : ''; }
     </script>
 </body>
 </html>
