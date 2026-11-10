@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>網文閱歷 - 小說閱讀筆記與備忘錄</title>
+    <title>網文閱歷 - 閱讀筆記與備忘錄</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -65,7 +65,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-book-bookmark text-2xl text-amber-400"></i>
-                <h1 class="text-xl font-bold tracking-wide">網文閱歷 <span class="text-xs font-normal opacity-75 bg-amber-800/80 px-2 py-0.5 rounded-full ml-1">小說備忘與追更</span></h1>
+                <h1 class="text-xl font-bold tracking-wide">小說庫 <span class="text-xs font-normal opacity-75 bg-amber-800/80 px-2 py-0.5 rounded-full ml-1">閱讀記錄及備忘</span></h1>
             </div>
             
             <div class="flex items-center space-x-2 sm:space-x-4">
@@ -773,15 +773,103 @@
             fileReader.onload = function(e) {
                 try {
                     const importedNovels = JSON.parse(e.target.result);
-                    if (Array.isArray(importedNovels)) {
-                        novels = importedNovels;
+                    if (!Array.isArray(importedNovels)) {
+                        alert('無效的 JSON 備份檔案格式！');
+                        return;
+                    }
+
+                    // 彈出選擇提示框
+                    const choice = prompt(
+                        `📥 請選擇匯入方式：\n\n` +
+                        `輸入 1 ：【合併匯入】（保留現有資料，僅加入新小說）\n` +
+                        `輸入 2 ：【完全覆蓋】（刪除目前所有舊資料，清空重來）\n\n` +
+                        `請輸入數字 1 或 2：`,
+                        "1"
+                    );
+
+                    if (choice === "1") {
+                        // 1. 合併模式（防重複）
+                        const existingIds = new Set(novels.map(n => n.id));
+                        let addedCount = 0;
+                        importedNovels.forEach(imported => {
+                            if (!existingIds.has(imported.id)) {
+                                novels.unshift(imported);
+                                addedCount++;
+                            }
+                        });
                         saveToLocalStorage();
                         renderApp();
-                        alert('還原成功！已載入 ' + novels.length + ' 本小說。');
+                        alert(`✅ 已完成合併！成功新增 ${addedCount} 本小說，原本的資料全數保留。`);
+
+                    } else if (choice === "2") {
+                        // 2. 覆蓋模式
+                        if (confirm(`⚠️ 確定要【完全覆蓋】嗎？這會清除你目前畫面上的所有資料！`)) {
+                            novels = importedNovels;
+                            saveToLocalStorage();
+                            renderApp();
+                            alert(`✅ 已完成完全覆蓋！目前共載入 ${novels.length} 本小說。`);
+                        }
+                    } else if (choice !== null) {
+                        alert('取消匯入：請輸入 1 或 2。');
                     }
-                } catch (err) { alert('檔案讀取失敗！'); }
+                } catch (err) {
+                    alert('檔案讀取失敗，請確認檔案格式是否正確。');
+                }
             };
-            if (event.target.files[0]) fileReader.readAsText(event.target.files[0]);
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0]);
+            }
+        }function importData(event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                try {
+                    const importedNovels = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedNovels)) {
+                        alert('無效的 JSON 備份檔案格式！');
+                        return;
+                    }
+
+                    // 彈出選擇提示框
+                    const choice = prompt(
+                        `📥 請選擇匯入方式：\n\n` +
+                        `輸入 1 ：【合併匯入】（保留現有資料，僅加入新小說）\n` +
+                        `輸入 2 ：【完全覆蓋】（刪除目前所有舊資料，清空重來）\n\n` +
+                        `請輸入數字 1 或 2：`,
+                        "1"
+                    );
+
+                    if (choice === "1") {
+                        // 1. 合併模式（防重複）
+                        const existingIds = new Set(novels.map(n => n.id));
+                        let addedCount = 0;
+                        importedNovels.forEach(imported => {
+                            if (!existingIds.has(imported.id)) {
+                                novels.unshift(imported);
+                                addedCount++;
+                            }
+                        });
+                        saveToLocalStorage();
+                        renderApp();
+                        alert(`✅ 已完成合併！成功新增 ${addedCount} 本小說，原本的資料全數保留。`);
+
+                    } else if (choice === "2") {
+                        // 2. 覆蓋模式
+                        if (confirm(`⚠️ 確定要【完全覆蓋】嗎？這會清除你目前畫面上的所有資料！`)) {
+                            novels = importedNovels;
+                            saveToLocalStorage();
+                            renderApp();
+                            alert(`✅ 已完成完全覆蓋！目前共載入 ${novels.length} 本小說。`);
+                        }
+                    } else if (choice !== null) {
+                        alert('取消匯入：請輸入 1 或 2。');
+                    }
+                } catch (err) {
+                    alert('檔案讀取失敗，請確認檔案格式是否正確。');
+                }
+            };
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0]);
+            }
         }
 
         function escapeHTML(str) {
