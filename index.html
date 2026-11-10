@@ -769,7 +769,35 @@
             downloadAnchor.click();
             downloadAnchor.remove();
         }
+<div style="margin: 10px 0;">
+    <label for="jsonTextInput">**貼上 JSON 文字匯入：**</label><br>
+    <textarea id="jsonTextInput" rows="5" style="width: 100%;" placeholder="請在此貼上您的 JSON 格式文字..."></textarea><br>
+    <button type="button" id="importJsonTextBtn" style="margin-top: 5px;">確認匯入文字 JSON</button>
+</div>
+        document.getElementById('importJsonTextBtn').addEventListener('click', function() {
+    const textInput = document.getElementById('jsonTextInput').value.trim();
+    
+    if (!textInput) {
+        alert('請先輸入或貼上 JSON 文字！');
+        return;
+    }
 
+    try {
+        // 將文字解析為 JSON 物件
+        const jsonData = JSON.parse(textInput);
+        
+        // ---------------------------------------------------------
+        // TODO: 請在這裡呼叫您原本處理 JSON 資料的函式
+        // 例如：loadData(jsonData); 或者是您原本的資料處理邏輯
+        // ---------------------------------------------------------
+        console.log('成功解析 JSON:', jsonData);
+        
+        alert('JSON 文字匯入成功！');
+        
+    } catch (error) {
+        alert('JSON 格式錯誤，請檢查您的文字內容：\n' + error.message);
+    }
+});
         function importData(event) {
             const fileReader = new FileReader();
             fileReader.onload = function(e) {
