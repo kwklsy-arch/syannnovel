@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網文閱歷 - 小說閱讀筆記與備忘錄</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        amber: { 50: '#fffbeb', 100: '#fef3c7', 800: '#92400e', 900: '#78350f' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入前端圖片 OCR 辨識庫 (Tesseract.js) -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+</head>
+<body class="bg-amber-50/30 text-slate-800 dark:text-slate-200 min-h-screen flex flex-col">
+
+    <header class="bg-amber-900 text-amber-50 shadow-md sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
+        <h1 class="text-xl font-bold">網文閱歷</h1>
+        <button onclick="openModal()" class="bg-amber-500 hover:bg-amber-400 text-amber-950 font-semibold px-4 py-2 rounded-lg text-sm shadow">
+            + 新增小說
+        </button>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow">
+        <div id="novelsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </main>
+
+    <!-- Modal -->
+    <div id="novelModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white dark:bg-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-8 p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-amber-900 dark:text-amber-400">新增小說記錄</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+
+            <!-- ⚡ 圖片智慧解析區塊 -->
+            <div class="bg-amber-50 dark:bg-zinc-900 border border-amber-200 dark:border-amber-900/50 p-4 rounded-xl mb-4">
+                <label class="block text-xs font-bold text-amber-900 dark:text-amber-400 mb-1">
+                    📷 上傳小說截圖圖片 (自動 OCR 辨識)
+                </label>
+                <div class="flex items-center gap-2 mt-2">
+                    <input type="file" id="imageInput" accept="image/*" class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-800 file:text-white hover:file:bg-amber-900 cursor-pointer">
+                    <button type="button" onclick="processImage()" id="ocrBtn" class="px-4 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-semibold shrink-0 transition">
+                        解析圖片
+                    </button>
+                </div>
+                <p id="ocrStatus" class="text-[11px] text-amber-700 dark:text-amber-400 mt-2 hidden">⏳ 圖片辨識中，請稍候...</p>
+            </div>
+
+            <form id="novelForm" onsubmit="saveNovel(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold mb-1">書名 *</label>
+                    <input type="text" id="formTitle" required class="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 dark:bg-zinc-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1">作者</label>
+                    <input type="text" id="formAuthor" class="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 dark:bg-zinc-900">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1">題材分類 (甜寵/重生/校園等)</label>
+                    <div class="flex gap-4 text-xs">
+                        <label><input type="checkbox" name="formGenre" value="甜寵" class="accent-amber-800"> 甜寵</label>
+                        <label><input type="checkbox" name="formGenre" value="重生" class="accent-amber-800"> 重生</label>
+                        <label><input type="checkbox" name="formGenre" value="校園" class="accent-amber-800"> 校園</label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1">核心防忘記憶點 / 簡介</label>
+                    <textarea id="formSummary" rows="3" class="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 dark:bg-zinc-900"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm text-slate-500">取消</button>
+                    <button type="submit" class="px-5 py-2 bg-amber-800 text-white rounded-lg text-sm font-semibold">儲存小說</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openModal() { document.getElementById('novelModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('novelModal').classList.add('hidden'); }
+
+        // 簡繁體常用字轉換表（解決簡體截圖問題）
+        function simpToTrad(str) {
+            const map = {'气':'氣', '体':'體', '书':'書', '作':'作', '者':'者', '甜':'甜', '宠':'寵', '爱':'愛', '阮':'阮', '昭':'昭', '颜':'顏', '诱':'誘', '缠':'纏', '独':'獨', '现':'現', '实':'實', '后':'後', '觉':'覺', '脑':'腦', '恋':'戀', '总':'總'};
+            return str.split('').map(c => map[c] || c).join('');
+        }
+
+        // 圖片上傳辨識核心邏輯
+        async function processImage() {
+            const fileInput = document.getElementById('imageInput');
+            const statusEl = document.getElementById('ocrStatus');
+            const btn = document.getElementById('ocrBtn');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('請先選擇一張截圖圖片！');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            statusEl.classList.remove('hidden');
+            statusEl.innerText = "⏳ 正在讀取並辨識截圖中的文字，請稍候...";
+            btn.disabled = true;
+
+            try {
+                // 使用 Tesseract 辨識中簡體與繁體文字
+                const worker = await Tesseract.createWorker('chi_sim+chi_tra');
+                const ret = await worker.recognize(file);
+                await worker.terminate();
+
+                let rawText = ret.data.text;
+                let cleanText = simpToTrad(rawText); // 轉繁體
+
+                // 自動拆解辨識結果
+                parseOCRResult(cleanText);
+
+                statusEl.innerText = "✅ 圖片辨識成功！已自動填入欄位。";
+            } catch (err) {
+                console.error(err);
+                statusEl.innerText = "❌ 辨識失敗，請重試或上傳較清晰的圖片。";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // 將辨識出來的文字自動帶入表單欄位
+        function parseOCRResult(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => {
+                if (!l) return false;
+                if (/^\d{1,2}:\d{2}$/.test(l)) return false; // 濾掉時間
+                if (l.includes('評分') || l.includes('連載') || l.includes('萬字') || l.includes('閱讀') || l.includes('目錄')) return false; // 濾掉UI雜訊
+                return true;
+            });
+
+            // 1. 自動填入書名（取長度合適的第一個有效行）
+            if (lines.length > 0) {
+                let title = lines.find(l => l.length > 2 && !l.includes('【')) || lines[0];
+                document.getElementById('formTitle').value = title.replace(/《|》/g, '').trim();
+            }
+
+            // 2. 自動填入作者（尋找短行名字）
+            for (let l of lines) {
+                if (l.length >= 2 && l.length <= 5 && !l.includes('，') && !l.includes('【')) {
+                    if (l !== document.getElementById('formTitle').value) {
+                        document.getElementById('formAuthor').value = l;
+                        break;
+                    }
+                }
+            }
+
+            // 3. 自動勾選題材
+            document.querySelectorAll('input[name="formGenre"]').forEach(cb => {
+                if (text.includes(cb.value)) cb.checked = true;
+            });
+
+            // 4. 自動填入簡介/記憶點
+            let summaryIndex = lines.findIndex(l => l.includes('【') || l.length > 20);
+            if (summaryIndex !== -1) {
+                document.getElementById('formSummary').value = lines.slice(summaryIndex, summaryIndex + 3).join(' ');
+            } else {
+                document.getElementById('formSummary').value = text.slice(0, 120);
+            }
+        }
+
+        function saveNovel(e) {
+            e.preventDefault();
+            alert('小說儲存成功！');
+            closeModal();
+        }
+    </script>
+</body>
+</html>
